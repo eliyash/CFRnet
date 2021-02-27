@@ -271,7 +271,7 @@ class cfr_net(object):
             weights_out = weights_out0 + weights_out1
             weights_pred = weights_pred0 + weights_pred1
         else:
-            h_input = tf.concat(1,[rep, t])
+            h_input = tf.concat([rep, t], 1)
             y, weights_out, weights_pred = self._build_output(h_input, dim_in+1, dim_out, do_out, FLAGS)
 
         return y, weights_out, weights_pred

@@ -41,6 +41,10 @@ def evaluate(config_file, overwrite=False, filters=None):
 
     output_dir = cfg['outdir']
 
+    try:
+        os.makedirs(output_dir)
+    except Exception as e:
+        pass
     if not os.path.isdir(output_dir):
         raise Exception('Could not find output at path: %s' % output_dir)
 

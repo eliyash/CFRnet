@@ -161,11 +161,15 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             loss_str = str(i) + '\tObj: %.3f,\tF: %.3f,\tCf: %.3f,\tImb: %.2g,\tVal: %.3f,\tValImb: %.2g,\tValObj: %.2f' \
                         % (obj_loss, f_error, cf_error, imb_err, valid_f_error, valid_imb, valid_obj)
 
-            if FLAGS.loss == 'log':
-                y_pred = sess.run(CFR.output, feed_dict={CFR.x: x_batch, \
-                    CFR.t: t_batch, CFR.do_in: 1.0, CFR.do_out: 1.0})
-                y_pred = 1.0*(y_pred > 0.5)
-                acc = 100*(1 - np.mean(np.abs(y_batch - y_pred)))
+            # if FLAGS.loss == 'log':
+            if True:
+                check_remission(CFR, dict_valid, sess, t_batch, x_batch, y_batch)
+                y_pred = sess.run(
+                    CFR.output,
+                    feed_dict={CFR.x: x_batch, CFR.t: t_batch, CFR.do_in: 1.0, CFR.do_out: 1.0}
+                )
+                y_pred_binary = 1.0*(y_pred > 0.5)
+                acc = 100*(1 - np.mean(np.abs(y_batch - y_pred_binary)))
                 loss_str += ',\tAcc: %.2f%%' % acc
 
             log(logfile, loss_str)
@@ -199,8 +203,35 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
                     reps_test_i = sess.run([CFR.h_rep], feed_dict={CFR.x: D_test['x'], \
                         CFR.do_in: 1.0, CFR.do_out: 0.0})
                     reps_test.append(reps_test_i)
+    # if FLAGS.loss == 'log':
+    if True:
+        y_pred = sess.run(
+            CFR.output,
+            feed_dict={CFR.x: x_batch, CFR.t: t_batch, CFR.do_in: 1.0, CFR.do_out: 1.0}
+        )
+        y_pred_binary = 1.0*(y_pred > 0.5)
+        acc = 100*(1 - np.mean(np.abs(y_batch - y_pred_binary)))
+        log(logfile, ',\tlast Acc: %.2f%%' % acc)
 
     return losses, preds_train, preds_test, reps, reps_test
+
+
+def check_remission(CFR, dict_valid, sess, t, x, y):
+    x = dict_valid[CFR.x]
+    y = dict_valid[CFR.y_]
+    t = dict_valid[CFR.t]
+
+    y_pred_t1 = sess.run(
+        CFR.output,
+        feed_dict={CFR.x: x, CFR.t: np.zeros_like(t), CFR.do_in: 1.0, CFR.do_out: 1.0}
+    )
+    y_pred_t2 = sess.run(
+        CFR.output,
+        feed_dict={CFR.x: x, CFR.t: np.ones_like(t), CFR.do_in: 1.0, CFR.do_out: 1.0}
+    )
+    y_pred_vec = np.concatenate([y_pred_t1, y_pred_t2], axis=1)
+    calculate_recommended_remission_rate(y, y_pred_vec, t)
+
 
 def run(outdir):
     """ Runs an experiment and stores result in outdir """
@@ -242,9 +273,11 @@ def run(outdir):
         if has_test:
             datapath_test = dataform_test
     else:
-        datapath = dataform % 1
-        if has_test:
-            datapath_test = dataform_test % 1
+        datapath = dataform
+        has_test = False
+        # datapath = dataform % 1
+        # if has_test:
+        #     datapath_test = dataform_test % 1
 
     log(logfile,     'Training data: ' + datapath)
     if has_test:
@@ -318,7 +351,7 @@ def run(outdir):
         n_experiments = FLAGS.repetitions
 
     ''' Run for all repeated experiments '''
-    for i_exp in range(1,n_experiments+1):
+    for i_exp in range(1, n_experiments+1):
 
         if FLAGS.repetitions>1:
             log(logfile, 'Training on repeated initialization %d/%d...' % (i_exp, FLAGS.repetitions))
@@ -349,7 +382,7 @@ def run(outdir):
                     else:
                         D_exp_test['ycf'] = None
             else:
-                datapath = dataform % i_exp
+                datapath = dataform
                 D_exp = load_data(datapath)
                 if has_test:
                     datapath_test = dataform_test % i_exp
@@ -411,6 +444,30 @@ def run(outdir):
             if has_test:
                 np.savez(repfile_test, rep=reps_test)
 
+
+def calculate_recommended_remission_rate(y_true_all, y_pred_all, treatments_all):
+    best_treatments = []
+    remission_recommended_drug = 0
+    total_recommended_drug = 0
+    for y_true, y_pred, treatment in zip(y_true_all, y_pred_all, treatments_all):
+        top_index = np.argmax(y_pred)
+        # if for the patient the recommended drug is the actual drug he received
+        if top_index == treatment[0]:
+            total_recommended_drug += 1
+            remission_recommended_drug += y_true
+        best_treatments.append(np.array2string(top_index))
+
+    # print the  "best" treatment for each patient
+    best_treatments_count = [(treatment, best_treatments.count(treatment)) for treatment in set(best_treatments)]
+    for treat, count in best_treatments_count:
+        print('treatment {}: {}'.format(treat, count))
+
+    print("****************************REMISSION RATE OF PATIENTS WHO RECEIVED RECOMMENDED DRUG********")
+    # print the average of the max prediction
+    print(remission_recommended_drug / float(total_recommended_drug))
+    print(total_recommended_drug)
+
+
 def main(argv=None):  # pylint: disable=unused-argument
     """ Main entry point """
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S-%f")
@@ -424,5 +481,29 @@ def main(argv=None):  # pylint: disable=unused-argument
             errfile.write(''.join(traceback.format_exception(*sys.exc_info())))
         raise
 
+
 if __name__ == '__main__':
-    tf.app.run()
+    argv = \
+        r'C:\Workspace\MS Project\CRFnet\cfr_net_train.py' \
+        ' --weight_init 0.1 --varsel 0 --dim_in 200 --dim_out 100 --nonlin elu --use_p_correction 0 ' \
+        '--dropout_out 1.0 --rbf_sigma 0.1 --dropout_in 1.0 --n_in 3 ' \
+        '--datadir ./data/ --val_part 0.3 ' \
+        '--lrate_decay 0.97 --reweight_sample 1 --optimizer Adam --imb_fun wass --split_output 1 --repetitions 1 ' \
+        '--wass_iterations 10 --data_test ihdp_npci_1-100.test.npz --p_alpha 1 --lrate 0.001 ' \
+        '--pred_output_delay 200 --normalization divide --outdir ./results/example_ihdp ' \
+        '--rep_weight_decay 0 --wass_bpt 1 --decay 0.3 --wass_lambda 10.0 --sparse 0 --n_out 3 ' \
+        '--batch_norm 0 ' \
+        '--experiments 1 ' \
+        '--batch_size 100 ' \
+        '--iterations 10000 ' \
+        '--p_lambda 0.0 ' \
+        '--p_alpha 0.0 ' \
+        '--loss log ' \
+        '--dataform transformed_train_data.csv'
+        # '--loss l2 ' \
+        # '--p_alpha 1 ' \
+        # ' --p_lambda 0.0001 ' \
+        # '--iterations 100000 ' \
+        # '--dataform ihdp_npci_1-100.train.npz'
+    tf.app.run(argv=argv.split(' '))
+    # tf.app.run()
