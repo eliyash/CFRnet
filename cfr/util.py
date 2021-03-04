@@ -83,10 +83,13 @@ def keep_2_drags(all_data_df, drug1, drug2):
     return all_data_df[what_to_keep], [drug1, drug2]
 
 
+CHOSEN_BINARY_DRUGS = {'drug_1.0', 'drug_2.0'}
+
+
 def generate_new_dataset(path_path):
     all_data_df, n_train, t_keys = get_data(path_path)
 
-    all_data_df, t_keys = keep_2_drags(all_data_df, 'drug_1.0', 'drug_2.0')
+    all_data_df, t_keys = keep_2_drags(all_data_df, *CHOSEN_BINARY_DRUGS)
 
     y_key = 'remsn'
     t_as_one_hot = all_data_df[t_keys]

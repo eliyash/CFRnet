@@ -64,6 +64,9 @@ __DEBUG__ = False
 if FLAGS.debug:
     __DEBUG__ = True
 
+CHOSEN_BINARY_DRUGS = {'drug_1.0', 'drug_2.0'}
+
+
 def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
     """ Trains a CFR model on supplied data """
 
