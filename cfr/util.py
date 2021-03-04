@@ -78,9 +78,7 @@ def get_data(path_path):
     return df_all, len(df_all), to_keep
 
 
-def keep_2_drags(all_data_df, drug1, drug2, t_keys):
-    drug1 = t_keys[drug1]
-    drug2 = t_keys[drug2]
+def keep_2_drags(all_data_df, drug1, drug2):
     what_to_keep = (all_data_df[drug1] > 0) | (all_data_df[drug2] > 0)
     return all_data_df[what_to_keep], [drug1, drug2]
 
@@ -88,7 +86,7 @@ def keep_2_drags(all_data_df, drug1, drug2, t_keys):
 def generate_new_dataset(path_path):
     all_data_df, n_train, t_keys = get_data(path_path)
 
-    all_data_df, t_keys = keep_2_drags(all_data_df, 4, 5, t_keys)
+    all_data_df, t_keys = keep_2_drags(all_data_df, 'drug_1.0', 'drug_2.0')
 
     y_key = 'remsn'
     t_as_one_hot = all_data_df[t_keys]

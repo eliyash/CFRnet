@@ -161,9 +161,9 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             loss_str = str(i) + '\tObj: %.3f,\tF: %.3f,\tCf: %.3f,\tImb: %.2g,\tVal: %.3f,\tValImb: %.2g,\tValObj: %.2f' \
                         % (obj_loss, f_error, cf_error, imb_err, valid_f_error, valid_imb, valid_obj)
 
-            # if FLAGS.loss == 'log':
-            if True:
-                check_remission(CFR, dict_valid, sess, t_batch, x_batch, y_batch)
+            check_remission(CFR, dict_valid, sess)
+            if FLAGS.loss == 'log':
+                check_remission(CFR, dict_valid, sess)
                 y_pred = sess.run(
                     CFR.output,
                     feed_dict={CFR.x: x_batch, CFR.t: t_batch, CFR.do_in: 1.0, CFR.do_out: 1.0}
@@ -216,7 +216,7 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
     return losses, preds_train, preds_test, reps, reps_test
 
 
-def check_remission(CFR, dict_valid, sess, t, x, y):
+def check_remission(CFR, dict_valid, sess):
     x = dict_valid[CFR.x]
     y = dict_valid[CFR.y_]
     t = dict_valid[CFR.t]
@@ -462,10 +462,16 @@ def calculate_recommended_remission_rate(y_true_all, y_pred_all, treatments_all)
     for treat, count in best_treatments_count:
         print('treatment {}: {}'.format(treat, count))
 
+    real_remission = y_true_all.mean()
+    new_remission = float(remission_recommended_drug) / float(total_recommended_drug)
+    print("****************************REMISSION BEFORE RECOMMENDED DRUG********")
+    print(real_remission)
     print("****************************REMISSION RATE OF PATIENTS WHO RECEIVED RECOMMENDED DRUG********")
     # print the average of the max prediction
-    print(remission_recommended_drug / float(total_recommended_drug))
+    print(new_remission)
     print(total_recommended_drug)
+    print("****************************REMISSION NEW/OLD********")
+    print(new_remission/real_remission)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
@@ -487,20 +493,20 @@ if __name__ == '__main__':
         r'C:\Workspace\MS Project\CRFnet\cfr_net_train.py' \
         ' --weight_init 0.1 --varsel 0 --dim_in 200 --dim_out 100 --nonlin elu --use_p_correction 0 ' \
         '--dropout_out 1.0 --rbf_sigma 0.1 --dropout_in 1.0 --n_in 3 ' \
-        '--datadir ./data/ --val_part 0.3 ' \
+        '--datadir ./data/ --val_part 0.2 ' \
         '--lrate_decay 0.97 --reweight_sample 1 --optimizer Adam --imb_fun wass --split_output 1 --repetitions 1 ' \
-        '--wass_iterations 10 --data_test ihdp_npci_1-100.test.npz --p_alpha 1 --lrate 0.001 ' \
+        '--wass_iterations 10 --lrate 0.01 ' \
         '--pred_output_delay 200 --normalization divide --outdir ./results/example_ihdp ' \
-        '--rep_weight_decay 0 --wass_bpt 1 --decay 0.3 --wass_lambda 10.0 --sparse 0 --n_out 3 ' \
+        '--rep_weight_decay 0 --wass_bpt 1 --decay 0.3 --sparse 0 --n_out 3 ' \
         '--batch_norm 0 ' \
         '--experiments 1 ' \
-        '--batch_size 100 ' \
+        '--batch_size 10 ' \
         '--iterations 10000 ' \
+        '--wass_lambda 10.0 ' \
         '--p_lambda 0.0 ' \
         '--p_alpha 0.0 ' \
-        '--loss log ' \
-        '--dataform transformed_train_data.csv'
-        # '--loss l2 ' \
+        '--loss l2 ' \
+        '--dataform transformed_all_data.csv'
         # '--p_alpha 1 ' \
         # ' --p_lambda 0.0001 ' \
         # '--iterations 100000 ' \
