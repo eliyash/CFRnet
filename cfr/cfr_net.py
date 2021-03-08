@@ -48,7 +48,7 @@ class cfr_net(object):
         self.wd_loss += wd*tf.nn.l2_loss(var)
         return var
 
-    def _build_graph(self, x, t, y_ , p_t, FLAGS, r_alpha, r_lambda, do_in, do_out, dims):
+    def _build_graph(self, x, t, y_, p_t, FLAGS, r_alpha, r_lambda, do_in, do_out, dims):
         """
         Constructs a TensorFlow subgraph for counterfactual regression.
         Sets the following member variables (to TF nodes):
@@ -143,10 +143,14 @@ class cfr_net(object):
 
         self.sample_weight = sample_weight
 
+        # y_ = tf.Print(y_, [], "-------------", summarize=20)
+        y_ = tf.Print(y_, [tf.shape(y), y], "y")
+        y_ = tf.Print(y_, [tf.shape(y), tf.math.greater(y, 0.5, name=None)], "yr: ", summarize=20)
+        y_ = tf.Print(y_, [tf.shape(y_), y_], "y_: ", summarize=20)
         ''' Construct factual loss function '''
         if FLAGS.loss == 'l1':
             risk = tf.reduce_mean(sample_weight*tf.abs(y_-y))
-            pred_error = -tf.reduce_mean(res)
+            pred_error = tf.reduce_mean(tf.abs(y_-y))
         elif FLAGS.loss == 'log':
             y = 0.995/(1.0+tf.exp(-y)) + 0.0025
             res = y_*tf.log(y) + (1.0-y_)*tf.log(1.0-y)
@@ -201,7 +205,6 @@ class cfr_net(object):
 
         if FLAGS.p_lambda>0:
             tot_error = tot_error + r_lambda*self.wd_loss
-
 
         if FLAGS.varsel:
             self.w_proj = tf.placeholder("float", shape=[dim_input], name='w_proj')
