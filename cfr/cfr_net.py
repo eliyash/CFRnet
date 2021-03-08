@@ -144,9 +144,9 @@ class cfr_net(object):
         self.sample_weight = sample_weight
 
         # y_ = tf.Print(y_, [], "-------------", summarize=20)
-        y_ = tf.Print(y_, [tf.shape(y), y], "y")
-        y_ = tf.Print(y_, [tf.shape(y), tf.math.greater(y, 0.5, name=None)], "yr: ", summarize=20)
-        y_ = tf.Print(y_, [tf.shape(y_), y_], "y_: ", summarize=20)
+        # y_ = tf.Print(y_, [tf.shape(y), y], "y")
+        # y_ = tf.Print(y_, [tf.shape(y), tf.math.greater(y, 0.5, name=None)], "yr: ", summarize=20)
+        # y_ = tf.Print(y_, [tf.shape(y_), y_], "y_: ", summarize=20)
         ''' Construct factual loss function '''
         if FLAGS.loss == 'l1':
             risk = tf.reduce_mean(sample_weight*tf.abs(y_-y))

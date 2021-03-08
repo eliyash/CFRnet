@@ -530,8 +530,8 @@ def main(argv=None):  # pylint: disable=unused-argument
 
 if __name__ == '__main__':
     argv = \
-        r'C:\Workspace\MS Project\CRFnet\cfr_net_train.py' \
-        ' --weight_init 0.1 --varsel 0 --dim_in 200 --dim_out 100 --nonlin elu --use_p_correction 0 ' \
+        'cfr_net_train.py' \
+        ' --weight_init 0.1 --varsel 0 --dim_in 20 --dim_out 10 --nonlin elu --use_p_correction 0 ' \
         '--dropout_out 0.5 --rbf_sigma 0.1 --dropout_in 0.5 --n_in 5 ' \
         '--datadir ./data/ --val_part 0.2 ' \
         '--lrate_decay 0.97 --reweight_sample 1 --optimizer Adam --imb_fun wass --split_output 1 --repetitions 1 ' \
@@ -543,9 +543,9 @@ if __name__ == '__main__':
         '--batch_size 200 ' \
         '--iterations 100000 ' \
         '--wass_lambda 10.0 ' \
-        '--p_lambda 0.0 ' \
+        '--p_lambda 0.000 ' \
         '--lrate 0.001 ' \
-        '--p_alpha 0.0 ' \
+        '--p_alpha 0.001 ' \
         '--loss l2 ' \
         '--dataform transformed_all_data.csv'
         # '--p_alpha 1 ' \
