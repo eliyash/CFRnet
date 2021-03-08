@@ -141,18 +141,8 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
                         CFR.y_: y_batch, CFR.do_in: FLAGS.dropout_in, CFR.do_out: FLAGS.dropout_out,
                         CFR.r_alpha: FLAGS.p_alpha, CFR.r_lambda: FLAGS.p_lambda, CFR.p_t: p_treated}
             sess.run(train_step, feed_dict=feed_dict)
-            feed_dict = {
-                CFR.x: x_batch,
-                CFR.t: t_batch,
-                CFR.y_: y_batch,
-                CFR.do_in: FLAGS.dropout_in,
-                CFR.do_out: FLAGS.dropout_out,
-                # CFR.r_alpha: FLAGS.p_alpha,
-                # CFR.r_lambda: FLAGS.p_lambda,
-                # CFR.p_t: p_treated
-            }
-            check_remission(CFR, x_batch, y_batch, t_batch, sess)
-            check_remission2(CFR, feed_dict, sess)
+            # check_remission(CFR, x_batch, y_batch, t_batch, sess)
+            # check_remission2(CFR, feed_dict, sess)
 
         ''' Project variable selection weights '''
         if FLAGS.varsel:
@@ -179,7 +169,10 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             loss_str = str(i) + '\tObj: %.3f,\tF: %.3f,\tCf: %.3f,\tImb: %.2g,\tVal: %.3f,\tValImb: %.2g,\tValObj: %.2f' \
                         % (obj_loss, f_error, cf_error, imb_err, valid_f_error, valid_imb, valid_obj)
 
-            # check_remission_dict(CFR, dict_valid, sess)
+            print("**************************** TRAIN****")
+            check_remission(CFR, x_batch, y_batch, t_batch, sess)
+            print("**************************** VALID****")
+            check_remission_dict(CFR, dict_valid, sess)
 
             if FLAGS.loss == 'log':
                 # check_remission_dict(CFR, dict_valid, sess)
@@ -234,6 +227,39 @@ def train(CFR, sess, train_step, D, I_valid, D_test, logfile, i_exp):
     return losses, preds_train, preds_test, reps, reps_test
 
 
+def calculate_recommended_remission_rate(y_true_all, pred_all, treatments_all):
+    best_treatments = []
+    remission_recommended_drug = 0
+    total_recommended_drug = 0
+    print("****************************AUC****")
+    y_pred_all = np.array([y_pred[int(t)] for y_pred, t in zip(pred_all, treatments_all)])
+    y_true_all = y_true_all.squeeze(1)
+    print(roc_auc_score(y_true_all, y_pred_all))
+    for y_true, y_pred, treatment in zip(y_true_all, pred_all, treatments_all):
+        top_index = np.argmax(y_pred)
+        # if for the patient the recommended drug is the actual drug he received
+        if top_index == treatment[0]:
+            total_recommended_drug += 1
+            remission_recommended_drug += y_true
+        best_treatments.append(np.array2string(top_index))
+
+    # print the  "best" treatment for each patient
+    best_treatments_count = [(treatment, best_treatments.count(treatment)) for treatment in set(best_treatments)]
+    for treat, count in best_treatments_count:
+        print('treatment {}: {}'.format(treat, count))
+
+    real_remission = y_true_all.mean()
+    new_remission = float(remission_recommended_drug) / float(total_recommended_drug)
+    print("****************************REMISSION BEFORE RECOMMENDED DRUG********")
+    print(real_remission)
+    print("****************************REMISSION RATE OF PATIENTS WHO RECEIVED RECOMMENDED DRUG********")
+    # print the average of the max prediction
+    print(new_remission)
+    print(total_recommended_drug)
+    print("****************************REMISSION NEW/OLD********")
+    print(new_remission/real_remission)
+
+
 def check_remission_dict(CFR, dict_of_values, sess):
     x = dict_of_values[CFR.x]
     y = dict_of_values[CFR.y_]
@@ -258,6 +284,7 @@ def check_remission2(CFR, feed_dict, sess):
     # print("****************************END****")
     y_pred_vec = np.concatenate([y_pred_t1, y_pred_t2], axis=1)
     calculate_recommended_remission_rate(feed_dict[CFR.y_], y_pred_vec, t)
+
 
 def check_remission(CFR, x, y, t, sess):
     # print("****************************T1****")
@@ -485,47 +512,6 @@ def run(outdir):
 
             if has_test:
                 np.savez(repfile_test, rep=reps_test)
-
-
-def calculate_recommended_remission_rate(y_true_all, pred_all, treatments_all):
-    best_treatments = []
-    remission_recommended_drug = 0
-    total_recommended_drug = 0
-    print("****************************AUC****")
-    y_pred_all = np.array([y_pred[int(t)] for y_pred, t in zip(pred_all, treatments_all)])
-    y_true_all = y_true_all.squeeze(1)
-    # auc_float = np.abs(y_pred_all-y_true_all).mean()
-    # print(auc_float)
-    print(roc_auc_score(y_true_all, y_pred_all))
-    # y_pred_all_binary = np.zeros_like(y_pred_all)
-    # y_pred_all_binary[y_pred_all > 0.5] = 1.0
-    # auc = np.abs(y_pred_all_binary-y_true_all)
-    # print(auc.mean())
-    # print(auc.sum())
-    return
-    for y_true, y_pred, treatment in zip(y_true_all, pred_all, treatments_all):
-        top_index = np.argmax(y_pred)
-        # if for the patient the recommended drug is the actual drug he received
-        if top_index == treatment[0]:
-            total_recommended_drug += 1
-            remission_recommended_drug += y_true
-        best_treatments.append(np.array2string(top_index))
-
-    # print the  "best" treatment for each patient
-    best_treatments_count = [(treatment, best_treatments.count(treatment)) for treatment in set(best_treatments)]
-    for treat, count in best_treatments_count:
-        print('treatment {}: {}'.format(treat, count))
-
-    real_remission = y_true_all.mean()
-    new_remission = float(remission_recommended_drug) / float(total_recommended_drug)
-    print("****************************REMISSION BEFORE RECOMMENDED DRUG********")
-    print(real_remission)
-    print("****************************REMISSION RATE OF PATIENTS WHO RECEIVED RECOMMENDED DRUG********")
-    # print the average of the max prediction
-    print(new_remission)
-    print(total_recommended_drug)
-    print("****************************REMISSION NEW/OLD********")
-    print(new_remission/real_remission)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
